@@ -142,6 +142,7 @@ button { border: 0; background: none; cursor: pointer; }
 .btn.warn { background: #c05621; }
 .btn.danger { background: var(--red); }
 .btn.sm { height: 28px; font-size: 12px; padding: 0 8px; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -179,12 +180,41 @@ label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px
 }
 .drawer-mask.show { display: flex; }
 .drawer {
-  width: 520px;
+  width: 580px;
   max-width: 100%;
   background: #fff;
   height: 100%;
   overflow: auto;
   padding: 20px;
+}
+.preview-box {
+  border: 1px solid #d8e8dc;
+  background: #f4fbf6;
+  border-radius: 12px;
+  padding: 12px;
+}
+.ai-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b6b3a;
+  background: #d9f3e4;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 10px;
+}
+.book-box, .json-wrap { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.book-box summary, .json-wrap summary { cursor: pointer; margin-bottom: 8px; }
+.book-list { line-height: 1.7; }
+.json-box {
+  background: #121821;
+  color: #d5dbe4;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow: auto;
+  max-height: 240px;
 }
 .drawer h3 { margin-bottom: 14px; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }

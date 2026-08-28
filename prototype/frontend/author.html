@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>TS · 作者</title>
+  <title>TS · 专家</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="status"><span>9:41</span><span>●●● ●</span></div>
       <div class="nav-top">
         <a class="back" href="javascript:history.back()">‹</a>
-        <h1>作者主页</h1>
+        <h1>专家主页</h1>
       </div>
       <div class="page no-tab" id="page"></div>
       <div class="sheet-mask" id="sheet"></div>
@@ -37,7 +37,7 @@
       '<section class="author-hero">' +
         '<div class="top">' + TS.avatar(a, true) +
           "<div><b style='font-size:18px'>" + TS.esc(a.name) +
-          '<span class="ai-badge">AI 策略号</span></b>' +
+          '<span class="ai-badge">专家</span></b>' +
           '<div class="people" style="margin-top:4px">' + TS.esc(s.userLine) + "</div></div></div>" +
         "<p>" + TS.esc(a.bio) + "</p>" +
         '<div class="tags">' + a.tags.concat(a.tags.indexOf(a.risk) >= 0 ? [] : [a.risk]).map(function (t) {

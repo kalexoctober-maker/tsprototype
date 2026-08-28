@@ -71,7 +71,7 @@
         if (!p) return "";
         var a = TS.owner(p);
         var name = a ? a.name : "—";
-        var mark = TS.isUgc(p) ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">AI 策略号</span>';
+        var mark = TS.isUgc(p) ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">专家</span>';
         var pnl = f.pnl == null ? "可赢 +" + (f.stake * f.odd).toFixed(2) : (f.pnl > 0 ? "+" + f.pnl : f.pnl);
         return '<a class="order-card" href="plan-detail.html?id=' + p.id + '">' +
           '<div class="hd"><b>' + TS.esc(p.title) + " · " + TS.esc(p.combo) + "</b>" + followLabel(f.status) + "</div>" +

@@ -36,7 +36,7 @@
         '<div class="top">' + TS.avatar(u, true) +
           "<div><b style='font-size:18px'>" + TS.esc(u.name) +
           '<span class="ugc-badge">用户晒单</span></b>' +
-          '<div class="people" style="margin-top:4px">真实用户 · 不是 AI 策略号</div></div></div>' +
+          '<div class="people" style="margin-top:4px">真实用户 · 不是专家</div></div></div>' +
         "<p>" + TS.esc(u.bio || "") + "</p>" +
         '<div class="stats">' +
           "<div class='stat'><b>" + (h.n ? h.pct + "%" : "—") + "</b><span>近" + cfg.n + "场注单</span></div>" +
@@ -46,9 +46,9 @@
         '<div class="dots">' + (u.hits || []).map(function (x) {
           return '<i class="dot ' + (x === "w" ? "win" : x === "l" ? "lose" : "void") + '"></i>';
         }).join("") + "</div>" +
-        '<div class="people" style="margin-top:8px">绿=猜中 · 红=未中 · 口径是用户自己的已结算注单，不是 AI 作者方案。</div>' +
+        '<div class="people" style="margin-top:8px">绿=猜中 · 红=未中 · 口径是用户自己的已结算注单，不是专家方案。</div>' +
       "</section>" +
-      '<div class="notice" style="padding-top:0">平台不为该用户创建可运营作者档案，也不会把这些注单写进任何策略号战绩。过往命中不代表未来。</div>' +
+      '<div class="notice" style="padding-top:0">平台不为该用户创建可运营专家档案，也不会把这些注单写进任何专家战绩。过往命中不代表未来。</div>' +
       '<div class="sec-hd"><h3>广场上的晒单</h3></div>' +
       '<div class="copy-list" id="open"></div>';
 

@@ -50,7 +50,7 @@ TS.card = function (plan, opts) {
   var profile = ugc ? ("user.html?id=" + encodeURIComponent(a.id)) : ("author.html?id=" + encodeURIComponent(a.id));
   var badge = ugc
     ? '<span class="ugc-badge">用户晒单</span>'
-    : '<span class="ai-badge">AI 策略号</span>';
+    : '<span class="ai-badge">专家</span>';
   var sub = ugc ? "晒自己的实盘注单" : TS.authorLine(a);
   var hit = ugc ? TS.ugcHitBadge(a) : TS.hitBadge(a);
   return (
@@ -78,7 +78,7 @@ TS.openSheet = function (planId) {
   var ugc = TS.isUgc(plan);
   var mask = document.getElementById("sheet");
   var notice = ugc
-    ? "本方案由用户分享，不是官方或 AI 策略号。过往命中不代表未来。确认即按该方案全部注项下单。"
+    ? "本方案由用户分享，不是官方或专家。过往命中不代表未来。确认即按该方案全部注项下单。"
     : "AI 推荐不保证盈利。过往命中率不代表未来结果。确认即按该方案全部注项下单。";
   mask.innerHTML =
     '<div class="sheet" onclick="event.stopPropagation()">' +
@@ -152,7 +152,7 @@ TS.openShareSheet = function (betId, onDone) {
       "</div>" +
       '<div class="preview"><span>将以真实昵称展示</span><b>' + TS.esc(user.name) +
       ' <span class="ugc-badge">用户晒单</span></b></div>' +
-      '<div class="notice" style="padding:0 0 10px">不会创建可运营的 AI 作者档案，也不会把这单写进任何策略号的近 X 场。</div>' +
+      '<div class="notice" style="padding:0 0 10px">不会创建可运营的专家档案，也不会把这单写进任何专家的近 X 场。</div>' +
       '<div class="people" style="margin-bottom:12px">门槛：近' + cfg.n + "场 " + h.w + "/" + h.n +
       "，已达标。全中后平台另发跟单本金 × " + cfg.rewardPct + "% 奖励给你。</div>" +
       '<button class="btn gold block" id="confirmShare">确认分享</button>' +

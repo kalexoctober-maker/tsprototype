@@ -33,7 +33,7 @@
             <button class="btn ghost" id="gen">按策略生成候选</button>
             <button class="btn" id="manual">人工补单</button>
           </div>
-          <p class="hint">人工补单必须先选作者，再填注项。总赔率按各腿连乘。默认进待审核；作者已上架才可以「保存并发布」。</p>
+          <p class="hint">人工补单：先选作者，每腿只填比赛 ID 和选项描述（如「主胜」「主让2球胜」）。点生成后，平台 AI 补齐赛事、玩法、赔率和方案 JSON，预览再发布。作者已上架才可以「保存并发布」。</p>
           <p class="hint">用户晒单：未改标题的提交即招募中（免审·未改标题）。只有用户改了标题才进待审核，过审/驳回；驳回原因用户可见并通知。</p>
           <p class="hint">「结算全中 / 结算未中」是整份方案的结果，不是单场：全中 = 每一腿都打中；未中 = 至少一腿没打中。正式环境应先接赛果自动判，这两颗按钮是人工兜底。</p>
           <table id="tbl"></table>
@@ -49,8 +49,8 @@
       { title: "亚盘精选 2串1", legs: "热刺-0.5 / 勒沃库森-0.75", odd: 3.51 },
       { title: "高置信三场", legs: "巴黎主胜 / 国米-0.5 / 皇社小3.5", odd: 5.62 }
     ];
-    var markets = ["胜平负", "让球", "大小球"];
     var statusName = { on: "上架", draft: "草稿", off: "下架" };
+    var manualDraft = null;
 
     function sourceBadge(src) {
       if (src === "ugc") return '<span class="badge ugc">用户分享</span>';
@@ -131,52 +131,30 @@
         : "已生成候选，进入待审核。作者：" + a.name + " / 策略：" + s.name);
     }
 
-    function readLegs() {
+    function readManualRows() {
       return Array.prototype.map.call(document.querySelectorAll("#legs .leg-edit"), function (row) {
         return {
-          match: row.querySelector("[data-f=match]").value.trim(),
-          market: row.querySelector("[data-f=market]").value,
-          pick: row.querySelector("[data-f=pick]").value.trim(),
-          odd: parseFloat(row.querySelector("[data-f=odd]").value)
+          matchId: row.querySelector("[data-f=mid]").value.trim(),
+          desc: row.querySelector("[data-f=desc]").value.trim()
         };
       });
     }
 
-    function totalOdd(legs) {
-      var t = legs.reduce(function (acc, leg) {
-        return acc * (leg.odd > 1 ? leg.odd : 1);
-      }, 1);
-      return Math.round(t * 100) / 100;
-    }
-
-    function refreshOdd() {
-      var el = document.getElementById("total-odd");
-      if (el) el.textContent = totalOdd(readLegs()).toFixed(2);
-    }
-
     function addLegRow(leg) {
-      leg = leg || { match: "", market: "胜平负", pick: "", odd: "" };
+      leg = leg || { matchId: "", desc: "" };
       var box = document.getElementById("legs");
       var row = document.createElement("div");
       row.className = "leg-edit";
       row.innerHTML =
         "<div class='form'>" +
-          "<div class='full'><label>赛事</label><input class='field' data-f='match' placeholder='主队 vs 客队' value='" + ADM.esc(leg.match) + "'></div>" +
-          "<div><label>玩法</label><select class='field' data-f='market'>" +
-            markets.map(function (m) {
-              return "<option" + (m === leg.market ? " selected" : "") + ">" + m + "</option>";
-            }).join("") +
-          "</select></div>" +
-          "<div><label>推荐选项</label><input class='field' data-f='pick' placeholder='主胜 / 大2.5 / -0.5' value='" + ADM.esc(leg.pick) + "'></div>" +
-          "<div class='full'><label>赔率</label><input class='field' data-f='odd' type='number' step='0.01' min='1.01' value='" + ADM.esc(leg.odd) + "'></div>" +
+          "<div><label>比赛 ID</label><input class='field' data-f='mid' list='match-ids' placeholder='如 M1001' value='" + ADM.esc(leg.matchId) + "'></div>" +
+          "<div><label>腿描述</label><input class='field' data-f='desc' placeholder='主胜 / 主让2球胜 / 大2.5' value='" + ADM.esc(leg.desc) + "'></div>" +
         "</div>" +
         "<button class='btn ghost sm' type='button' data-del style='margin-top:8px'>删除这腿</button>";
       box.appendChild(row);
-      row.addEventListener("input", refreshOdd);
       row.querySelector("[data-del]").onclick = function () {
         if (document.querySelectorAll("#legs .leg-edit").length <= 1) return alert("至少留一腿");
         row.remove();
-        refreshOdd();
       };
     }
 
@@ -200,25 +178,21 @@
       if (!aid) return alert("请选择作者");
       var a = ADM.author(aid);
       if (publish && a.status !== "on") return alert("作者未上架，不能直接发布");
+      if (!manualDraft) return alert("请先点「生成」，预览 AI 方案后再发布");
       var title = document.getElementById("f-title").value.trim();
-      var legs = readLegs();
       if (!title) return alert("请填写方案标题");
-      if (!legs.length) return alert("至少一腿");
-      for (var i = 0; i < legs.length; i++) {
-        if (!legs[i].match || !legs[i].pick || !(legs[i].odd > 1)) {
-          return alert("第 " + (i + 1) + " 腿请填完整赛事、选项，赔率需大于 1");
-        }
-      }
-      var combo = legs.length + "串1";
+      var payload = manualDraft;
       ADM.db.plans.unshift({
         id: "p" + Date.now(),
         aid: aid,
-        title: title.indexOf(combo) >= 0 ? title : title + " " + combo,
+        title: title,
+        combo: payload.combo,
         status: publish ? "live" : "review",
-        odd: totalOdd(legs),
+        odd: payload.odd,
         follows: 0,
         gmv: 0,
-        legs: legs.map(function (l) { return l.match + " " + l.pick; }).join(" / "),
+        cutoff: payload.cutoff,
+        legs: payload.legs,
         source: "manual"
       });
       ADM.save();
@@ -226,29 +200,102 @@
       render();
     }
 
+    function showInputStep() {
+      document.getElementById("manual-input").style.display = "";
+      document.getElementById("manual-preview").style.display = "none";
+    }
+
+    function showPreview(payload) {
+      document.getElementById("f-title").value = payload.title;
+      document.getElementById("pv-combo").textContent = payload.combo;
+      document.getElementById("pv-cutoff").textContent = payload.cutoff;
+      document.getElementById("total-odd").textContent = Number(payload.odd).toFixed(2);
+      document.getElementById("pv-legs").innerHTML =
+        "<tr><th>比赛 ID</th><th>赛事</th><th>玩法</th><th>选项</th><th>赔率</th></tr>" +
+        payload.legs.map(function (leg) {
+          return "<tr><td>" + ADM.esc(leg.matchId) + "</td><td>" + ADM.esc(leg.match) +
+            "<div class='muted'>" + ADM.esc(leg.league) + " · " + ADM.esc(leg.time) + "</div></td>" +
+            "<td>" + ADM.esc(leg.market) + "</td><td>" + ADM.esc(leg.pick) + "</td>" +
+            "<td>" + Number(leg.odd).toFixed(2) + "</td></tr>";
+        }).join("");
+      document.getElementById("ai-json").textContent = JSON.stringify(payload, null, 2);
+      document.getElementById("manual-input").style.display = "none";
+      document.getElementById("manual-preview").style.display = "";
+    }
+
+    function runGenerate() {
+      var aid = document.getElementById("f-author").value;
+      if (!aid) return alert("请选择作者");
+      var rows = readManualRows();
+      if (!rows.length) return alert("至少一腿");
+      var btn = document.getElementById("ai-gen");
+      btn.disabled = true;
+      btn.textContent = "AI 生成中…";
+      setTimeout(function () {
+        var result = ADM.aiBuildManual(rows);
+        btn.disabled = false;
+        btn.textContent = "生成";
+        if (!result.ok) return alert(result.errors.join("\n"));
+        result.payload.authorId = aid;
+        result.payload.authorName = ADM.author(aid).name;
+        manualDraft = result.payload;
+        showPreview(result.payload);
+        showAuthorHint();
+      }, 700);
+    }
+
     function openManual() {
+      manualDraft = null;
+      var book = ADM.MATCH_BOOK.map(function (m) {
+        return "<div>" + m.id + " · " + m.league + " · " + ADM.matchLabel(m) + " · " + m.time + "</div>";
+      }).join("");
+      var options = ADM.MATCH_BOOK.map(function (m) {
+        return "<option value='" + m.id + "'>" + m.id + " " + ADM.matchLabel(m) + "</option>";
+      }).join("");
       ADM.openDrawer(
         "<h3>人工补单</h3>" +
+        "<p class='hint' style='margin-bottom:14px'>运营只填比赛 ID 和腿描述。点生成后，平台内嵌 AI 按货盘补齐目标格式，预览确认再发布。</p>" +
         "<div class='form'>" +
           "<div class='full'><label>作者（必选，人工指定）</label>" +
           "<select class='field' id='f-author'>" + authorOptions("") + "</select>" +
           "<p class='hint' id='author-hint' style='margin-top:8px'>必须由人工指定作者。方案会挂在该作者名下，结算后计入其近 X 场。</p></div>" +
-          "<div class='full'><label>方案标题</label><input class='field' id='f-title' placeholder='如：欧冠夜场'></div>" +
-          "<div class='full'><label>注项</label><div id='legs'></div>" +
-          "<button class='btn ghost sm' type='button' id='add-leg'>+ 加一腿</button></div>" +
-          "<div class='full odd-bar'><span>总赔率（各腿连乘）</span><b id='total-odd'>1.00</b></div>" +
         "</div>" +
-        "<div class='toolbar' style='margin-top:16px'>" +
-          "<button class='btn ghost' id='save-review'>保存为待审核</button>" +
-          "<button class='btn' id='save-pub' disabled>保存并发布</button>" +
-          "<button class='btn ghost' onclick='document.getElementById(\"drawer\").classList.remove(\"show\")'>取消</button>" +
+        "<div id='manual-input'>" +
+          "<div class='form'>" +
+            "<div class='full'><label>注项</label><div id='legs'></div>" +
+            "<button class='btn ghost sm' type='button' id='add-leg'>+ 加一腿</button></div>" +
+          "</div>" +
+          "<details class='book-box'><summary>演示货盘（正式环境由 Agent 查实时比赛）</summary><div class='book-list'>" + book + "</div></details>" +
+          "<datalist id='match-ids'>" + options + "</datalist>" +
+          "<div class='toolbar' style='margin-top:16px'>" +
+            "<button class='btn' id='ai-gen'>生成</button>" +
+            "<button class='btn ghost' onclick='document.getElementById(\"drawer\").classList.remove(\"show\")'>取消</button>" +
+          "</div>" +
+        "</div>" +
+        "<div id='manual-preview' style='display:none'>" +
+          "<div class='preview-box'>" +
+            "<div class='ai-tag'>平台 Agent 已生成 · 请核对后发布</div>" +
+            "<div class='form'>" +
+              "<div class='full'><label>方案标题（可改）</label><input class='field' id='f-title'></div>" +
+            "</div>" +
+            "<p class='hint' style='margin:10px 0 8px'><span id='pv-combo'></span> · <span id='pv-cutoff'></span></p>" +
+            "<table id='pv-legs'></table>" +
+            "<div class='odd-bar' style='margin-top:10px'><span>总赔率（各腿连乘）</span><b id='total-odd'>1.00</b></div>" +
+            "<details class='json-wrap'><summary>目标 JSON</summary><pre class='json-box' id='ai-json'></pre></details>" +
+          "</div>" +
+          "<div class='toolbar' style='margin-top:16px'>" +
+            "<button class='btn ghost' id='back-edit'>返回修改</button>" +
+            "<button class='btn ghost' id='save-review'>保存为待审核</button>" +
+            "<button class='btn' id='save-pub' disabled>保存并发布</button>" +
+          "</div>" +
         "</div>"
       );
       addLegRow();
       addLegRow();
-      refreshOdd();
       document.getElementById("f-author").onchange = showAuthorHint;
-      document.getElementById("add-leg").onclick = function () { addLegRow(); refreshOdd(); };
+      document.getElementById("add-leg").onclick = function () { addLegRow(); };
+      document.getElementById("ai-gen").onclick = runGenerate;
+      document.getElementById("back-edit").onclick = showInputStep;
       document.getElementById("save-review").onclick = function () { saveManual(false); };
       document.getElementById("save-pub").onclick = function () { saveManual(true); };
     }
@@ -333,7 +380,7 @@
             ADM.pushNotice({
               userId: p.uid || "u-me", type: "reward", planId: p.id, planTitle: p.title,
               title: "晒单奖励已到账 " + paid.toFixed(2),
-              body: "跟单总本金 " + (p.gmv || 0) + " × " + ADM.rewardPct() + "% = " + paid.toFixed(2) + "。不计入 AI 作者战绩。"
+              body: "跟单总本金 " + (p.gmv || 0) + " × " + ADM.rewardPct() + "% = " + paid.toFixed(2) + "。不计入专家战绩。"
             });
           }
         }

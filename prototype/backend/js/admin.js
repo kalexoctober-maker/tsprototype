@@ -254,6 +254,214 @@ ADM.esc = function (s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 };
 
+ADM.MATCH_BOOK = [
+  { id: "M1001", home: "马竞", away: "勒沃库森", league: "欧冠", time: "03:00",
+    odds1x2: { home: 2.10, draw: 3.40, away: 3.55 },
+    ah: [[-2, 2.62, 1.48], [-1, 1.95, 1.85], [-0.5, 1.85, 1.95], [0, 1.72, 2.10]],
+    ou: [[2.5, 1.90, 1.90], [3.5, 1.55, 2.40]] },
+  { id: "M1002", home: "曼联", away: "利物浦", league: "英超", time: "03:45",
+    odds1x2: { home: 3.60, draw: 3.50, away: 2.00 },
+    ah: [[-1, 2.80, 1.42], [-0.5, 2.20, 1.68], [0, 1.95, 1.85], [1, 1.72, 2.12]],
+    ou: [[2.5, 1.86, 1.94], [3.5, 1.52, 2.48]] },
+  { id: "M1003", home: "国米", away: "米兰", league: "意甲", time: "03:45",
+    odds1x2: { home: 1.85, draw: 3.40, away: 4.20 },
+    ah: [[-1, 2.05, 1.78], [-0.5, 1.82, 2.00], [0, 1.62, 2.28]],
+    ou: [[2.5, 1.90, 1.90], [3.5, 1.58, 2.35]] },
+  { id: "M1004", home: "皇马", away: "毕尔巴鄂", league: "西甲", time: "02:30",
+    odds1x2: { home: 1.48, draw: 4.40, away: 6.50 },
+    ah: [[-2, 2.20, 1.68], [-1, 1.78, 2.04], [-0.5, 1.58, 2.36]],
+    ou: [[2.5, 1.74, 2.08], [3.5, 1.48, 2.62]] },
+  { id: "M1005", home: "拜仁", away: "多特", league: "德甲", time: "02:30",
+    odds1x2: { home: 1.70, draw: 4.00, away: 4.50 },
+    ah: [[-1.5, 2.10, 1.72], [-0.75, 1.92, 1.88], [-0.5, 1.80, 2.02]],
+    ou: [[2.5, 1.66, 2.20], [3.5, 1.42, 2.80]] },
+  { id: "M1006", home: "阿森纳", away: "维拉", league: "英超", time: "01:00",
+    odds1x2: { home: 1.55, draw: 4.10, away: 6.00 },
+    ah: [[-1.5, 2.15, 1.70], [-1, 1.88, 1.92], [-0.5, 1.70, 2.14]],
+    ou: [[2.5, 1.72, 2.10], [3.5, 1.46, 2.68]] },
+  { id: "M1007", home: "那不勒斯", away: "罗马", league: "意甲", time: "02:45",
+    odds1x2: { home: 1.95, draw: 3.30, away: 3.90 },
+    ah: [[-1, 2.18, 1.68], [-0.5, 1.90, 1.90], [0, 1.70, 2.15]],
+    ou: [[2.5, 1.88, 1.92], [3.5, 1.56, 2.38]] },
+  { id: "M1008", home: "巴萨", away: "马洛卡", league: "西甲", time: "02:00",
+    odds1x2: { home: 1.40, draw: 4.80, away: 7.50 },
+    ah: [[-2, 2.05, 1.78], [-1.5, 1.82, 2.00], [-1, 1.62, 2.28]],
+    ou: [[2.5, 1.68, 2.16], [3.5, 1.44, 2.72]] },
+  { id: "M1009", home: "莱比锡", away: "霍芬海姆", league: "德甲", time: "01:30",
+    odds1x2: { home: 1.70, draw: 3.90, away: 4.60 },
+    ah: [[-1, 1.98, 1.82], [-0.5, 1.78, 2.04], [0, 1.60, 2.32]],
+    ou: [[2.5, 1.66, 2.20], [3.5, 1.40, 2.90]] },
+  { id: "M1010", home: "维拉", away: "狼队", league: "英超", time: "03:00",
+    odds1x2: { home: 1.85, draw: 3.50, away: 4.30 },
+    ah: [[-1, 2.22, 1.66], [-0.5, 1.88, 1.92], [0, 1.68, 2.18]],
+    ou: [[2.5, 1.74, 2.08], [3.5, 1.50, 2.52]] },
+  { id: "M1011", home: "布莱顿", away: "水晶宫", league: "英超", time: "00:30",
+    odds1x2: { home: 1.90, draw: 3.40, away: 4.10 },
+    ah: [[-0.75, 2.00, 1.80], [-0.5, 1.86, 1.94], [0, 1.70, 2.14]],
+    ou: [[2.5, 1.84, 1.96], [3.5, 1.54, 2.42]] },
+  { id: "M1012", home: "本菲卡", away: "波尔图", league: "葡超", time: "03:15",
+    odds1x2: { home: 2.05, draw: 3.20, away: 3.60 },
+    ah: [[-0.5, 1.92, 1.88], [0, 1.75, 2.08], [0.5, 1.58, 2.36]],
+    ou: [[2.5, 1.88, 1.92], [3.5, 1.55, 2.40]] }
+];
+
+ADM.findMatch = function (id) {
+  var key = String(id || "").trim().toUpperCase();
+  return ADM.MATCH_BOOK.filter(function (m) { return m.id === key; })[0];
+};
+
+ADM.matchLabel = function (m) {
+  return m.home + " vs " + m.away;
+};
+
+ADM.fmtNum = function (n) {
+  return Math.abs(n % 1) < 1e-9 ? String(Math.abs(n)) : String(Math.abs(n));
+};
+
+ADM.nearestOdd = function (rows, line, homeSide) {
+  if (!rows || !rows.length) return 1.85;
+  var best = rows[0];
+  var bestDiff = Math.abs(rows[0][0] - line);
+  rows.forEach(function (row) {
+    var d = Math.abs(row[0] - line);
+    if (d < bestDiff) {
+      best = row;
+      bestDiff = d;
+    }
+  });
+  return homeSide ? best[1] : best[2];
+};
+
+ADM.parseLegDesc = function (raw, match) {
+  var s = String(raw || "").trim();
+  if (!s) return { ok: false, error: "请填写腿描述" };
+  var t = s.replace(/\s+/g, "")
+    .replace(/主队/g, "主")
+    .replace(/客队/g, "客")
+    .replace(/平局|和局|打平/g, "平")
+    .replace(/赢盘|赢/g, "胜")
+    .replace(/大球/g, "大")
+    .replace(/小球/g, "小");
+
+  var ou = t.match(/^(大|小)(?:球)?(\d+(?:\.\d+)?)$/);
+  if (ou) {
+    var ouLine = parseFloat(ou[2]);
+    var over = ou[1] === "大";
+    return {
+      ok: true,
+      market: "大小球",
+      pick: (over ? "大 " : "小 ") + ADM.fmtNum(ouLine),
+      odd: ADM.nearestOdd(match.ou, ouLine, over),
+      marketId: "ou:" + (over ? "over" : "under") + ":" + ouLine
+    };
+  }
+
+  if (/^主胜$/.test(t)) {
+    return { ok: true, market: "胜平负", pick: "主胜", odd: match.odds1x2.home, marketId: "1x2:home" };
+  }
+  if (/^客胜$/.test(t)) {
+    return { ok: true, market: "胜平负", pick: "客胜", odd: match.odds1x2.away, marketId: "1x2:away" };
+  }
+  if (/^平$/.test(t)) {
+    return { ok: true, market: "胜平负", pick: "平", odd: match.odds1x2.draw, marketId: "1x2:draw" };
+  }
+
+  var words = { "两球半": 2.5, "一球半": 1.5, "球半": 1.5, "两球": 2, "三球": 3, "一球": 1, "半球": 0.5 };
+  var t2 = t;
+  Object.keys(words).sort(function (a, b) { return b.length - a.length; }).forEach(function (w) {
+    t2 = t2.split(w).join(String(words[w]));
+  });
+  t2 = t2.replace(/球/g, "");
+
+  var giveMatch = t2.match(/^(主|客)?让([+]?\d+(?:\.\d+)?)胜?$/);
+  if (giveMatch) {
+    var giveSide = giveMatch[1] || "主";
+    var give = parseFloat(giveMatch[2]);
+    var giveTeam = giveSide === "主" ? match.home : match.away;
+    var giveHomeLine = giveSide === "主" ? -give : give;
+    return {
+      ok: true,
+      market: "让球",
+      pick: giveTeam + " -" + ADM.fmtNum(give),
+      odd: ADM.nearestOdd(match.ah, giveHomeLine, giveSide === "主"),
+      marketId: "ah:" + giveSide + ":" + giveHomeLine
+    };
+  }
+
+  var signed = t2.match(/^(主|客)([+-]\d+(?:\.\d+)?)胜?$/);
+  if (signed) {
+    var signedSide = signed[1];
+    var signedLine = parseFloat(signed[2]);
+    var signedTeam = signedSide === "主" ? match.home : match.away;
+    var signedHome = signedSide === "主" ? signedLine : -signedLine;
+    return {
+      ok: true,
+      market: "让球",
+      pick: signedTeam + " " + (signedLine > 0 ? "+" : "-") + ADM.fmtNum(signedLine),
+      odd: ADM.nearestOdd(match.ah, signedHome, signedSide === "主"),
+      marketId: "ah:" + signedSide + ":" + signedHome
+    };
+  }
+
+  return { ok: false, error: "无法识别「" + s + "」。可用：主胜 / 客胜 / 平 / 主让2球胜 / 大2.5" };
+};
+
+ADM.aiBuildManual = function (rows) {
+  var errors = [];
+  var seen = {};
+  var legs = [];
+  rows.forEach(function (row, i) {
+    var n = i + 1;
+    var match = ADM.findMatch(row.matchId);
+    if (!match) {
+      errors.push("第 " + n + " 腿：找不到比赛 ID " + (row.matchId || "（空）"));
+      return;
+    }
+    if (seen[match.id]) {
+      errors.push("第 " + n + " 腿：同一方案不能重复赛事 " + match.id);
+      return;
+    }
+    seen[match.id] = true;
+    var parsed = ADM.parseLegDesc(row.desc, match);
+    if (!parsed.ok) {
+      errors.push("第 " + n + " 腿：" + parsed.error);
+      return;
+    }
+    legs.push({
+      matchId: match.id,
+      match: ADM.matchLabel(match),
+      home: match.home,
+      away: match.away,
+      league: match.league,
+      time: match.time,
+      market: parsed.market,
+      pick: parsed.pick,
+      odd: Math.round(parsed.odd * 100) / 100,
+      marketId: parsed.marketId
+    });
+  });
+  if (!rows.length) errors.push("至少一腿");
+  if (errors.length) return { ok: false, errors: errors };
+
+  var odd = Math.round(legs.reduce(function (acc, leg) { return acc * leg.odd; }, 1) * 100) / 100;
+  var combo = legs.length === 1 ? "单关" : (legs.length + "串1");
+  var leagues = [];
+  legs.forEach(function (leg) {
+    if (leagues.indexOf(leg.league) < 0) leagues.push(leg.league);
+  });
+  var title = (leagues.length === 1 ? leagues[0] : "精选") + " " + combo;
+  var times = legs.map(function (leg) { return leg.time; }).sort();
+  var payload = {
+    title: title,
+    combo: combo,
+    source: "manual",
+    cutoff: "今晚 " + times[0] + " 截止",
+    odd: odd,
+    legs: legs
+  };
+  return { ok: true, errors: [], payload: payload };
+};
+
 ADM.author = function (id) {
   return ADM.db.authors.filter(function (a) { return a.id === id; })[0];
 };

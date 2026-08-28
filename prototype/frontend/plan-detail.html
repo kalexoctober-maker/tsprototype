@@ -34,12 +34,12 @@
       var odd = TS.totalOdd(plan);
       var publisher = TS.isPublisher(plan);
       var profile = ugc ? ("user.html?id=" + encodeURIComponent(a.id)) : ("author.html?id=" + encodeURIComponent(a.id));
-      var badge = ugc ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">AI 策略号</span>';
-      var sub = ugc ? "晒自己的实盘注单，不是 AI 策略号" : TS.authorLine(a);
+      var badge = ugc ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">专家</span>';
+      var sub = ugc ? "晒自己的实盘注单，不是专家" : TS.authorLine(a);
       var hit = ugc ? TS.ugcHitBadge(a) : TS.hitBadge(a);
       var notice = ugc
-        ? ("本方案由用户「" + a.name + "」分享，不是平台 AI 策略号，也不代表官方推荐。展示命中率为该用户近 " +
-          TS.shareCfg().n + " 场已结算注单，不计入任何 AI 作者战绩。过往命中不代表未来。")
+        ? ("本方案由用户「" + a.name + "」分享，不是平台专家，也不代表官方推荐。展示命中率为该用户近 " +
+          TS.shareCfg().n + " 场已结算注单，不计入任何专家战绩。过往命中不代表未来。")
         : (function () {
             var h = TS.hitRate(a);
             return "近" + (h.n < a.x ? h.n : a.x) + "场实盘命中 " + h.w + "/" + h.n +
