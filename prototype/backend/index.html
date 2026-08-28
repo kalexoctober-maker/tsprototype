@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 概览</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="index.html" data-title="今日概览">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi"><span>待审核方案</span><b id="k1"></b><em>算法候选 + 改了标题的晒单</em></div>
+          <div class="kpi"><span>招募中方案</span><b id="k2"></b><em>正在被用户跟单</em></div>
+          <div class="kpi"><span>今日跟单人数</span><b>86</b><em>演示：含重复用户去重前 124 笔</em></div>
+          <div class="kpi"><span>今日跟单 GMV</span><b>12,480</b><em>演示币</em></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h2>作者战绩（实盘窗口，不可手改）</h2>
+            <table id="rank"></table>
+          </div>
+          <div class="card">
+            <h2>待办</h2>
+            <div class="todo" id="todo-review"></div>
+            <div class="todo" id="todo-ugc"></div>
+            <div class="todo" id="todo-author"></div>
+            <div class="todo">赔率漂移拦截：今日 0</div>
+            <div class="todo">结算异常：今日 0</div>
+            <p class="hint" style="margin-top:14px">命中率只由已发布已结算方案滚动计算。这里看不到「编辑命中率」入口是刻意的。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/admin.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var review = ADM.db.plans.filter(function (p) { return p.status === "review"; }).length;
+      var live = ADM.db.plans.filter(function (p) { return p.status === "live"; }).length;
+      document.getElementById("k1").textContent = review;
+      document.getElementById("k2").textContent = live;
+      document.getElementById("rank").innerHTML =
+        "<tr><th>作者</th><th>策略</th><th>近 X 命中</th><th>状态</th></tr>" +
+        ADM.db.authors.map(function (a) {
+          var s = ADM.strategy(a.sid);
+          return "<tr><td>" + ADM.esc(a.emoji + " " + a.name) + "</td><td>" + ADM.esc(s.name) +
+            "</td><td>" + ADM.hit(a) + "</td><td>" +
+            (a.status === "draft" ? '<span class="badge wait">草稿</span>' : ADM.statusLabel[a.status]) +
+            "</td></tr>";
+        }).join("");
+      var drafts = ADM.db.authors.filter(function (a) { return a.status === "draft"; });
+      var ugcReview = ADM.db.plans.filter(function (p) {
+        return p.status === "review" && p.source === "ugc" && p.titleEdited;
+      }).length;
+      document.getElementById("todo-review").innerHTML = review + ' 个方案待审核 <a href="plans.html">去审核 →</a>';
+      document.getElementById("todo-ugc").innerHTML = ugcReview
+        ? ugcReview + ' 条改标题晒单待审核 <a href="plans.html">去审核晒单 →</a>'
+        : "没有待审用户晒单（未改标题的免审，不计入）";
+      document.getElementById("todo-author").innerHTML = drafts.length
+        ? drafts.length + " 个作者仍是草稿（" + drafts.map(function (a) { return a.name; }).join("、") + '）<a href="authors.html">去上架 →</a>'
+        : "没有草稿作者";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 首页（含跟单）</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <header class="app-header">
+        <div class="logo">TS</div>
+        <div class="sport-pill"><i>⚽</i> Football <span style="color:#8b93a1">▾</span></div>
+        <div class="header-actions">
+          <button class="icon-btn">⌕</button>
+          <span id="bell-slot"></span>
+        </div>
+      </header>
+
+      <div class="page">
+        <section class="hero">
+          <div class="hero-meta"><span class="live-dot">LIVE 41'</span><span>UEFA Champions League</span></div>
+          <h2>Atlético Madrid<br>Bayer Leverkusen</h2>
+          <div class="hero-odds">
+            <div class="odd"><small>1</small><b>2.10</b></div>
+            <div class="odd"><small>X</small><b>3.40</b></div>
+            <div class="odd"><small>2</small><b>3.55</b></div>
+          </div>
+        </section>
+
+        <div class="banner">1.1% DAILY SLOT REBATE <em>· 今日返水</em></div>
+
+        <section class="sec">
+          <div class="sec-hd"><h3>Recommend</h3><a class="more" href="#">更多 ›</a></div>
+          <div class="league-row">
+            <div class="league on"><span>🇮🇹</span>Serie A</div>
+            <div class="league"><span>🇬🇧</span>EPL</div>
+            <div class="league"><span>🇪🇸</span>La Liga</div>
+            <div class="league"><span>🇩🇪</span>Bundes</div>
+            <div class="league"><span>🇫🇷</span>Ligue 1</div>
+          </div>
+          <div class="h-scroll" style="margin-top:10px">
+            <div class="match-mini"><div class="t">国米 vs 米兰</div><div class="o"><span>1.85</span><span>3.40</span><span>4.20</span></div></div>
+            <div class="match-mini"><div class="t">阿森纳 vs 维拉</div><div class="o"><span>1.55</span><span>4.10</span><span>6.00</span></div></div>
+            <div class="match-mini"><div class="t">皇马 vs 毕尔巴鄂</div><div class="o"><span>1.48</span><span>4.40</span><span>6.50</span></div></div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <div class="sec-hd">
+            <h3>跟单精选</h3>
+            <a class="more" href="plans.html">更多 ›</a>
+          </div>
+          <div class="h-scroll" id="featured"></div>
+        </section>
+
+        <section class="sec">
+          <div class="sec-hd"><h3>Hot</h3></div>
+          <div class="hot-card">
+            <div class="tag">HOT MATCH</div>
+            <h4>Manchester United<br>Liverpool</h4>
+            <div class="people">03:45 · 英超</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <div class="tabs">
+            <button>Yesterday</button>
+            <button class="on">Today</button>
+            <button>Upcoming</button>
+          </div>
+          <div class="league-group">
+            <div class="lg">European Football League</div>
+            <div class="row-match">
+              <div class="star">☆</div>
+              <div class="teams">马竞<br>勒沃库森<small>LIVE 41'</small></div>
+              <div class="odds3"><span>2.10</span><span>3.40</span><span>3.55</span></div>
+            </div>
+            <div class="row-match">
+              <div class="star">☆</div>
+              <div class="teams">曼联<br>利物浦<small>03:45</small></div>
+              <div class="odds3"><span>3.80</span><span>3.60</span><span>1.90</span></div>
+            </div>
+            <div class="row-match">
+              <div class="star">☆</div>
+              <div class="teams">国米<br>米兰<small>03:45</small></div>
+              <div class="odds3"><span>1.85</span><span>3.40</span><span>4.20</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <nav class="tabbar">
+        <a class="on" href="index.html">⌂<span>首页</span></a>
+        <a href="plans.html">◎<span>跟单</span></a>
+        <a href="#"><div class="plus">+</div></a>
+        <a href="my-follows.html">☰<span>记录</span></a>
+        <a href="my-follows.html?tab=bets">○<span>我的</span></a>
+      </nav>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.getElementById("bell-slot").innerHTML = TS.bellHtml();
+    var box = document.getElementById("featured");
+    box.innerHTML = ["p1", "p2", "p3"].map(function (id) { return TS.card(TS.plans[id]); }).join("");
+    TS.bindCards(box);
+  </script>
+</body>
+</html>

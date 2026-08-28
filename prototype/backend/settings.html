@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 配置</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="settings.html" data-title="全局配置">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="card">
+          <h2>命中率与货盘</h2>
+          <div class="form">
+            <div><label>全局默认窗口 X</label><input class="field" id="x" type="number"></div>
+            <div><label>X 允许范围（最小）</label><input class="field" id="xmin" type="number"></div>
+            <div><label>X 允许范围（最大）</label><input class="field" id="xmax" type="number"></div>
+            <div><label>首页精选条数</label><input class="field" id="featured" type="number"></div>
+            <div><label>赔率漂移拦截（%）</label><input class="field" id="drift" type="number"></div>
+            <div><label>开赛前截止（分钟）</label><input class="field" id="cutoff" type="number"></div>
+            <div><label>晒单窗口 N（已结算注单）</label><input class="field" id="shareN" type="number" min="1"></div>
+            <div><label>晒单命中阈值（%）</label><input class="field" id="shareHit" type="number" min="1" max="100"></div>
+            <div><label>晒单奖励比例（%）</label><input class="field" id="rewardPct" type="number" min="0" max="100" step="0.1"></div>
+            <div class="full checks">
+              <label><input type="checkbox" id="once"> 同一用户同一方案只能跟 1 次</label>
+              <label><input type="checkbox" id="showAmt"> C 端展示已跟金额</label>
+            </div>
+          </div>
+          <div class="toolbar" style="margin-top:16px">
+            <button class="btn" id="save">保存配置</button>
+          </div>
+          <p class="hint" style="margin-top:12px">作者未单独设置 X 时用全局默认。对外命中率永远按「已发布已结算方案」算，配置页也不能写死一个展示百分比。</p>
+          <p class="hint">晒单门槛与作者窗口 X 分开：看用户自己近 N 张已结算注单（串关整单=1 场），达到阈值才能点「分享到广场」。不写进任何 AI 作者近 X 场。</p>
+          <p class="hint">晒单奖励：方案全中后，平台另发给晒单人「该方案跟单总本金 × 奖励比例」（默认 2%）。未中/走水不发。不从跟单用户本金抽成，也不写入 AI 作者战绩。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/admin.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var s = ADM.db.settings;
+      ["x","xmin","xmax","featured","drift","cutoff","shareN","shareHit","rewardPct"].forEach(function (k) {
+        document.getElementById(k).value = s[k];
+      });
+      document.getElementById("once").checked = s.once;
+      document.getElementById("showAmt").checked = s.showAmt;
+      document.getElementById("save").onclick = function () {
+        ADM.db.settings = {
+          x: +document.getElementById("x").value,
+          xmin: +document.getElementById("xmin").value,
+          xmax: +document.getElementById("xmax").value,
+          featured: +document.getElementById("featured").value,
+          drift: +document.getElementById("drift").value,
+          cutoff: +document.getElementById("cutoff").value,
+          shareN: +document.getElementById("shareN").value || 10,
+          shareHit: +document.getElementById("shareHit").value || 70,
+          rewardPct: +document.getElementById("rewardPct").value >= 0 ? +document.getElementById("rewardPct").value : 2,
+          once: document.getElementById("once").checked,
+          showAmt: document.getElementById("showAmt").checked
+        };
+        ADM.save();
+        var ugc = ADM.loadUgc();
+        if (ugc) {
+          ugc.settings = {
+            n: ADM.db.settings.shareN,
+            hitPct: ADM.db.settings.shareHit,
+            rewardPct: ADM.db.settings.rewardPct
+          };
+          ADM.saveUgc(ugc);
+        }
+        alert("已保存（仅本机演示）");
+      };
+    });
+  </script>
+</body>
+</html>

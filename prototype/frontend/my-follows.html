@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 记录</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top" id="top">
+        <a class="back" href="index.html">‹</a>
+        <h1>记录</h1>
+      </div>
+      <div class="page" style="height:calc(100% - 180px)">
+        <div class="tabs" id="main-tabs">
+          <button class="on" data-main="follows">我的跟单</button>
+          <button data-main="bets">我的投注</button>
+        </div>
+        <div id="sub-tabs" class="tabs" style="border:0;margin-bottom:8px">
+          <button class="on" data-tab="ing">进行中</button>
+          <button data-tab="done">已结算</button>
+        </div>
+        <div id="gate" hidden></div>
+        <div id="list"></div>
+      </div>
+      <nav class="tabbar">
+        <a href="index.html">⌂<span>首页</span></a>
+        <a href="plans.html">◎<span>跟单</span></a>
+        <a href="#"><div class="plus">+</div></a>
+        <a class="on" href="my-follows.html">☰<span>记录</span></a>
+        <a href="my-follows.html?tab=bets">○<span>我的</span></a>
+      </nav>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var main = TS.qs("tab") === "bets" ? "bets" : "follows";
+    var tab = "ing";
+    TS.mountBell(document.getElementById("top"));
+
+    function followLabel(st) {
+      if (st === "ing") return '<span class="badge ing">进行中</span>';
+      if (st === "win") return '<span class="badge win">全中</span>';
+      return '<span class="badge lose">未中</span>';
+    }
+
+    function betLabel(bet) {
+      if (bet.status === "live") return '<span class="badge ing">已开赛</span>';
+      if (bet.status === "cancelled") return '<span class="badge void">已取消</span>';
+      if (bet.status === "settled" && bet.result === "win") return '<span class="badge win">猜中</span>';
+      if (bet.status === "settled") return '<span class="badge lose">未中</span>';
+      if (bet.share === "pending") return '<span class="badge wait">审核中</span>';
+      if (bet.share === "approved") return '<span class="badge win">已上广场</span>';
+      if (bet.share === "rejected") return '<span class="badge lose">已驳回</span>';
+      return '<span class="badge">未开赛</span>';
+    }
+
+    function renderFollows() {
+      document.getElementById("gate").hidden = true;
+      document.getElementById("sub-tabs").hidden = false;
+      var rows = TS.myFollows.filter(function (f) {
+        return tab === "ing" ? f.status === "ing" : f.status !== "ing";
+      });
+      document.getElementById("list").innerHTML = rows.length ? rows.map(function (f) {
+        var p = TS.plans[f.planId];
+        if (!p) return "";
+        var a = TS.owner(p);
+        var name = a ? a.name : "—";
+        var mark = TS.isUgc(p) ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">AI 策略号</span>';
+        var pnl = f.pnl == null ? "可赢 +" + (f.stake * f.odd).toFixed(2) : (f.pnl > 0 ? "+" + f.pnl : f.pnl);
+        return '<a class="order-card" href="plan-detail.html?id=' + p.id + '">' +
+          '<div class="hd"><b>' + TS.esc(p.title) + " · " + TS.esc(p.combo) + "</b>" + followLabel(f.status) + "</div>" +
+          '<div class="people">' + TS.esc(name) + " " + mark + " · " + TS.esc(p.legs.map(function (l) { return l.pick; }).join(" / ")) + "</div>" +
+          '<div class="people" style="margin-top:4px">本金 ' + f.stake + " · 赔率 " + f.odd.toFixed(2) + "</div>" +
+          '<div style="margin-top:8px;color:' + (f.pnl > 0 ? "var(--green)" : f.pnl < 0 ? "var(--red)" : "var(--gold)") + '">' + pnl + "</div>" +
+        "</a>";
+      }).join("") : '<div class="empty">这一栏还没有跟单</div>';
+    }
+
+    function shareBtnHtml(bet, user, demo) {
+      var state = demo
+        ? { can: false, why: "近10场需猜中7成，当前 5/10", kind: "gate" }
+        : TS.shareState(bet, user);
+      var show = bet.status === "upcoming" || demo;
+      if (!show) return "";
+      if (!demo && bet.share === "approved" && bet.sharePlanId) {
+        return '<div class="bet-actions">' +
+          '<a class="btn gold" href="plan-detail.html?id=' + encodeURIComponent(bet.sharePlanId) + '">查看数据</a>' +
+          '<div class="bet-why">已在广场 · 点此看跟单人数、总额和预期奖励</div>' +
+        "</div>";
+      }
+      if (!demo && bet.share === "pending" && bet.sharePlanId) {
+        return '<div class="bet-actions">' +
+          '<a class="btn ghost" href="plan-detail.html?id=' + encodeURIComponent(bet.sharePlanId) + '">查看详情</a>' +
+          '<div class="bet-why">已改标题，等待审核</div>' +
+        "</div>";
+      }
+      var disabled = state.can ? "" : " disabled";
+      return '<div class="bet-actions">' +
+        '<button class="btn gold" data-share="' + (demo ? "" : bet.id) + '"' + disabled + '>分享到广场</button>' +
+        (state.can ? "" : '<div class="bet-why' + (state.kind === "rej" ? " rej" : "") + '">' + TS.esc(state.why) + "</div>") +
+      "</div>";
+    }
+
+    function betCard(bet, user) {
+      var odd = TS.totalOdd(bet);
+      var href = (bet.share === "approved" || bet.share === "pending") && bet.sharePlanId
+        ? ' data-href="plan-detail.html?id=' + encodeURIComponent(bet.sharePlanId) + '"'
+        : "";
+      var shownTitle = bet.title;
+      if (bet.sharePlanId && TS.plans[bet.sharePlanId]) shownTitle = TS.plans[bet.sharePlanId].title;
+      return '<div class="bet-card' + (href ? " is-shared" : "") + '"' + href + ">" +
+        '<div class="hd" style="display:flex;justify-content:space-between;margin-bottom:6px"><b>' +
+          TS.esc(shownTitle) + " · " + TS.esc(bet.combo) + "</b>" + betLabel(bet) + "</div>" +
+        TS.legsHtml(bet) +
+        '<div class="copy-foot" style="margin-top:8px"><div class="total-odd"><small>总赔率</small><b>' +
+          odd.toFixed(2) + "</b></div></div>" +
+        shareBtnHtml(bet, user, false) +
+      "</div>";
+    }
+
+    function renderBets() {
+      TS.hydrate();
+      document.getElementById("sub-tabs").hidden = true;
+      var user = TS.currentUser();
+      var cfg = TS.shareCfg();
+      var gateEl = document.getElementById("gate");
+      gateEl.hidden = false;
+      var acc = TS.demoAccount || "me";
+      var gate = TS.shareGate(user);
+      var h = user ? TS.userHitRate(user, cfg.n) : { w: 0, n: 0 };
+      var who = !user ? "未登录" : user.name + " · " + h.w + "/" + h.n;
+      var verdict = !user ? '<span class="no">按钮可见但不可点</span>' : (gate.ok ? '<span class="ok">已达门槛</span>' : '<span class="no">未达门槛</span>');
+      gateEl.innerHTML =
+        '<div class="gate">' +
+          "<div><b>分享门槛</b>　" + TS.esc(TS.thresholdCopy(cfg)) +
+          "（近 " + cfg.n + " 张已结算注单，串关整单算 1 场）</div>" +
+          '<div class="people" style="margin-top:6px">当前：' + TS.esc(who) + "　" + verdict + "</div>" +
+          '<div class="acct">' +
+            '<button data-acc="me"' + (acc === "me" ? ' class="on"' : "") + ">阿凯 8/10</button>" +
+            '<button data-acc="low"' + (acc === "low" ? ' class="on"' : "") + ">路人乙 5/10</button>" +
+            '<button data-acc="out"' + (acc === "out" ? ' class="on"' : "") + ">未登录</button>" +
+          "</div></div>";
+
+      var cards = (TS.myBets || []).map(function (bet) { return betCard(bet, user); }).join("");
+      cards +=
+        '<div class="bet-card is-demo">' +
+          '<div class="hd" style="display:flex;justify-content:space-between;margin-bottom:6px"><b>模拟未达标</b>' +
+          '<span class="badge">演示</span></div>' +
+          '<div class="people">同一张未开赛串关，在 5/10 账号下按钮禁用。</div>' +
+          shareBtnHtml({ id: "demo", status: "upcoming", share: null }, user, true) +
+        "</div>";
+      document.getElementById("list").innerHTML = cards;
+      TS.bindCards(document.getElementById("list"));
+    }
+
+    function render() {
+      document.querySelectorAll("#main-tabs button").forEach(function (b) {
+        b.classList.toggle("on", b.getAttribute("data-main") === main);
+      });
+      if (main === "bets") renderBets();
+      else renderFollows();
+    }
+
+    document.getElementById("main-tabs").addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      main = btn.getAttribute("data-main");
+      render();
+    });
+    document.getElementById("sub-tabs").addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      tab = btn.getAttribute("data-tab");
+      document.querySelectorAll("#sub-tabs button").forEach(function (b) { b.classList.toggle("on", b === btn); });
+      renderFollows();
+    });
+    document.getElementById("gate").addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-acc]");
+      if (!btn) return;
+      TS.setAccount(btn.getAttribute("data-acc"));
+      renderBets();
+    });
+    document.getElementById("list").addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-share]");
+      if (!btn || btn.disabled) return;
+      var id = btn.getAttribute("data-share");
+      if (!id) return;
+      TS.openShareSheet(id, renderBets);
+    });
+    render();
+  </script>
+</body>
+</html>

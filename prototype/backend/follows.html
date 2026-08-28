@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 订单</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="follows.html" data-title="跟单订单">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="card">
+          <div class="toolbar">
+            <input class="search" id="q" placeholder="订单号 / 用户 / 作者">
+            <select id="st">
+              <option value="">全部状态</option>
+              <option value="ing">进行中</option>
+              <option value="win">全中</option>
+              <option value="lose">未中</option>
+            </select>
+          </div>
+          <p class="hint">订单只读。要改结果，去方案页做结算，不要在这里改单场输赢。</p>
+          <table id="tbl"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/admin.js"></script>
+  <script>
+    function render() {
+      var q = (document.getElementById("q").value || "").toLowerCase();
+      var st = document.getElementById("st").value;
+      var rows = ADM.db.follows.filter(function (f) {
+        var hit = !q || (f.id + f.user + f.author).toLowerCase().indexOf(q) >= 0;
+        return hit && (!st || f.status === st);
+      });
+      document.getElementById("tbl").innerHTML =
+        "<tr><th>订单</th><th>用户</th><th>作者</th><th>方案</th><th>本金</th><th>跟单赔率</th><th>可赢</th><th>状态</th><th>时间</th></tr>" +
+        rows.map(function (f) {
+          return "<tr><td>" + f.id + "</td><td>" + f.user + "</td><td>" + ADM.esc(f.author) + "</td><td>" + f.plan +
+            "</td><td>" + f.stake + "</td><td>" + f.odd.toFixed(2) + "</td><td>" + (f.stake * f.odd).toFixed(2) +
+            "</td><td>" + ADM.statusLabel[f.status] + "</td><td>" + f.time + "</td></tr>";
+        }).join("");
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      render();
+      document.getElementById("q").oninput = render;
+      document.getElementById("st").onchange = render;
+    });
+  </script>
+</body>
+</html>

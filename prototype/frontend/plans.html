@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 跟单广场</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top" id="top">
+        <a class="back" href="index.html">‹</a>
+        <h1>跟单广场</h1>
+      </div>
+      <div class="page" style="height:calc(100% - 180px)">
+        <div class="chips" id="chips">
+          <button class="chip on" data-f="all">全部可跟</button>
+          <button class="chip" data-f="ai">AI 策略号</button>
+          <button class="chip" data-f="ugc">用户晒单</button>
+          <button class="chip" data-f="稳健">稳健</button>
+          <button class="chip" data-f="数据">数据</button>
+          <button class="chip" data-f="亚盘">亚盘</button>
+          <button class="chip" data-f="冷门">冷门</button>
+          <button class="chip" data-f="大小球">大小球</button>
+        </div>
+        <div class="copy-list" id="list"></div>
+      </div>
+      <nav class="tabbar">
+        <a href="index.html">⌂<span>首页</span></a>
+        <a class="on" href="plans.html">◎<span>跟单</span></a>
+        <a href="#"><div class="plus">+</div></a>
+        <a href="my-follows.html">☰<span>记录</span></a>
+        <a href="my-follows.html?tab=bets">○<span>我的</span></a>
+      </nav>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var filter = "all";
+    TS.mountBell(document.getElementById("top"));
+    TS.onFollowed = function () { render(); };
+    function render() {
+      TS.hydrate();
+      var ids = Object.keys(TS.plans).filter(function (id) {
+        var p = TS.plans[id];
+        if (p.status !== "open" && p.status !== "live") return false;
+        if (filter === "all") return true;
+        if (filter === "ugc") return TS.isUgc(p);
+        if (filter === "ai") return !TS.isUgc(p);
+        var a = TS.owner(p);
+        return a && a.tags && a.tags.indexOf(filter) >= 0;
+      });
+      var list = document.getElementById("list");
+      list.innerHTML = ids.length
+        ? ids.map(function (id) { return TS.card(TS.plans[id]); }).join("")
+        : '<div class="empty">没有符合筛选的方案，换个标签试试</div>';
+      TS.bindCards(list);
+    }
+    document.getElementById("chips").addEventListener("click", function (e) {
+      var btn = e.target.closest(".chip");
+      if (!btn) return;
+      filter = btn.getAttribute("data-f");
+      document.querySelectorAll(".chip").forEach(function (c) { c.classList.toggle("on", c === btn); });
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>

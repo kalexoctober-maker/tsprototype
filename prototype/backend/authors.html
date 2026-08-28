@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 作者</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="authors.html" data-title="作者管理（平台编造）">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="card">
+          <div class="toolbar">
+            <input class="search" id="q" placeholder="搜作者名 / 标签">
+            <select id="st">
+              <option value="">全部状态</option>
+              <option value="on">上架</option>
+              <option value="draft">草稿</option>
+              <option value="off">下架</option>
+            </select>
+            <button class="btn" id="add">新建作者</button>
+          </div>
+          <p class="hint">作者不是真实用户。上架前必须绑定启用中的策略。没有「填写命中率」字段。用户晒单不会出现在这里，也不会自动生成作者档案。</p>
+          <table id="tbl"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-mask" id="drawer"></div>
+  <script src="js/admin.js"></script>
+  <script>
+    function render() {
+      var q = (document.getElementById("q").value || "").toLowerCase();
+      var st = document.getElementById("st").value;
+      var rows = ADM.db.authors.filter(function (a) {
+        var hit = !q || (a.name + a.tags).toLowerCase().indexOf(q) >= 0;
+        return hit && (!st || a.status === st);
+      });
+      document.getElementById("tbl").innerHTML =
+        "<tr><th>作者</th><th>绑定策略</th><th>窗口 X</th><th>实盘命中</th><th>风险</th><th>状态</th><th></th></tr>" +
+        rows.map(function (a) {
+          var s = ADM.strategy(a.sid);
+          return "<tr><td><div class='author-cell'><div class='av' style='background:" + a.color + "'>" + a.emoji +
+            "</div><div><b>" + ADM.esc(a.name) + "</b><div class='muted'>" + ADM.esc(a.tags) + "</div></div></div></td>" +
+            "<td>" + ADM.esc(s.name) + "<div class='muted'>" + ADM.esc(s.userLine) + "</div></td>" +
+            "<td>" + a.x + "</td><td>" + ADM.hit(a) + "</td><td>" + a.risk + "</td><td>" +
+            (a.status === "draft" ? '<span class="badge wait">草稿</span>' : ADM.statusLabel[a.status]) + "</td>" +
+            "<td class='row-actions'><button class='btn ghost sm' data-edit='" + a.id + "'>编辑</button>" +
+            (a.status === "on"
+              ? "<button class='btn ghost sm' data-off='" + a.id + "'>下架</button>"
+              : "<button class='btn sm' data-on='" + a.id + "'>上架</button>") +
+            "</td></tr>";
+        }).join("");
+    }
+
+    function form(a) {
+      a = a || { id: "", name: "", emoji: "🤖", color: "#2a3d5c", bio: "", tags: "", sid: "s1", x: ADM.db.settings.x, risk: "平衡", status: "draft" };
+      var opts = ADM.db.strategies.map(function (s) {
+        return "<option value='" + s.id + "'" + (s.id === a.sid ? " selected" : "") + ">" + s.name + " · " + s.userLine + "</option>";
+      }).join("");
+      ADM.openDrawer(
+        "<h3>" + (a.id ? "编辑作者" : "新建作者") + "</h3>" +
+        "<div class='form'>" +
+          "<div><label>显示名</label><input class='field' id='f-name' value='" + ADM.esc(a.name) + "'></div>" +
+          "<div><label>头像符号</label><input class='field' id='f-emoji' value='" + ADM.esc(a.emoji) + "'></div>" +
+          "<div class='full'><label>简介（≤80 字，需对上策略）</label><textarea class='area' id='f-bio' rows='3'>" + ADM.esc(a.bio) + "</textarea></div>" +
+          "<div><label>标签（逗号分隔）</label><input class='field' id='f-tags' value='" + ADM.esc(a.tags) + "'></div>" +
+          "<div><label>风险等级</label><select class='field' id='f-risk'><option>稳健</option><option>平衡</option><option>进取</option></select></div>" +
+          "<div class='full'><label>绑定策略（一个作者只绑一个）</label><select class='field' id='f-sid'>" + opts + "</select></div>" +
+          "<div><label>命中率窗口 X</label><input class='field' id='f-x' type='number' min='5' max='50' value='" + a.x + "'></div>" +
+          "<div><label>状态</label><select class='field' id='f-st'><option value='draft'>草稿</option><option value='on'>上架</option><option value='off'>下架</option></select></div>" +
+          "<div class='full hint'>命中率由结算方案自动算，这里不能填百分比。新作者 0 场时 C 端显示「新锐作者」。头像色块用于演示，正式环境改为上传。</div>" +
+        "</div>" +
+        "<div class='toolbar' style='margin-top:16px'><button class='btn' id='save'>保存</button><button class='btn ghost' onclick='document.getElementById(\"drawer\").classList.remove(\"show\")'>取消</button></div>"
+      );
+      document.getElementById("f-risk").value = a.risk;
+      document.getElementById("f-st").value = a.status;
+      document.getElementById("save").onclick = function () {
+        var name = document.getElementById("f-name").value.trim();
+        if (!name) return alert("请填写显示名");
+        var payload = {
+          id: a.id || ("a" + Date.now()),
+          name: name,
+          emoji: document.getElementById("f-emoji").value || "🤖",
+          color: a.color || "#2a3d5c",
+          bio: document.getElementById("f-bio").value.trim(),
+          tags: document.getElementById("f-tags").value,
+          sid: document.getElementById("f-sid").value,
+          x: Math.min(50, Math.max(5, parseInt(document.getElementById("f-x").value, 10) || 20)),
+          risk: document.getElementById("f-risk").value,
+          status: document.getElementById("f-st").value,
+          w: a.w || 0,
+          n: a.n || 0,
+          follows: a.follows || 0
+        };
+        if (payload.status === "on") {
+          var s = ADM.strategy(payload.sid);
+          if (!s || !s.on) return alert("上架失败：必须绑定启用中的策略");
+          if (!payload.bio) return alert("上架失败：简介不能为空");
+        }
+        if (a.id) {
+          ADM.db.authors = ADM.db.authors.map(function (x) { return x.id === a.id ? payload : x; });
+        } else {
+          ADM.db.authors.unshift(payload);
+        }
+        ADM.save();
+        document.getElementById("drawer").classList.remove("show");
+        render();
+      };
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      render();
+      document.getElementById("q").oninput = render;
+      document.getElementById("st").onchange = render;
+      document.getElementById("add").onclick = function () { form(null); };
+      document.getElementById("tbl").addEventListener("click", function (e) {
+        var ed = e.target.getAttribute("data-edit");
+        var on = e.target.getAttribute("data-on");
+        var off = e.target.getAttribute("data-off");
+        if (ed) form(ADM.author(ed));
+        if (on) {
+          var a = ADM.author(on);
+          var s = ADM.strategy(a.sid);
+          if (!s.on) return alert("绑定策略已停用，不能上架");
+          if (!a.bio) return alert("简介为空，不能上架");
+          a.status = "on"; ADM.save(); render();
+        }
+        if (off) { ADM.author(off).status = "off"; ADM.save(); render(); }
+      });
+    });
+  </script>
+</body>
+</html>

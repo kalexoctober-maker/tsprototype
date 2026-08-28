@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TS 跟单系统 · 原型入口</title>
+  <style>
+    :root { --bg:#0b0e13; --card:#171c24; --line:rgba(255,255,255,.08); --text:#f4f6f8; --muted:#8b93a1; --green:#1ecb7b; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; }
+    .mark {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(145deg, #1ecb7b, #0b8f52);
+      display: grid; place-items: center; font-weight: 800;
+    }
+    h1 { font-size: 28px; margin: 16px 0 8px; }
+    .lead { color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .card {
+      display: block;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .card:hover { border-color: rgba(30,203,123,.4); }
+    .card b { display: block; font-size: 18px; margin-bottom: 8px; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .tag { display: inline-block; font-size: 11px; color: #062414; background: var(--green); border-radius: 999px; padding: 2px 8px; font-weight: 700; margin-bottom: 10px; }
+    .tag.ops { background: #4c8dff; color: #fff; }
+    ul { margin: 28px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    a.doc { color: var(--green); }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="mark">TS</div>
+    <h1>跟单系统原型</h1>
+    <p class="lead">
+      跟单 = 用户一键使用某套方案去下注。V1 货盘是平台编造的 AI 策略号；V1.1 并列用户晒单（真实昵称 +「用户晒单」）。未改标题免审立刻上广场，改标题才待审；全中后平台另发晒单奖励。产品说明见
+      <a class="doc" href="../docs/跟单系统-产品需求文档.md">跟单系统-产品需求文档.md</a>。
+    </p>
+    <div class="grid">
+      <a class="card" href="frontend/index.html">
+        <span class="tag">用户端</span>
+        <b>首页（含跟单精选）</b>
+        <p>嵌在现有 Recommend 与 Hot 之间。可进广场（含用户晒单）、方案详情、作者 / 晒单用户，并弹出跟单半层。</p>
+      </a>
+      <a class="card" href="backend/index.html">
+        <span class="tag ops">运营端</span>
+        <b>跟单运营台</b>
+        <p>编造作者、绑定不同 AI 策略、生成/审核方案（含用户分享）、看订单与命中率窗口。不能手改命中率。</p>
+      </a>
+    </div>
+    <ul>
+      <li>用户端：首页 → 跟单广场（筛 AI / 用户晒单）→ 方案详情 / 作者 → 记录里的我的跟单 / 我的投注</li>
+      <li>晒单：记录 → 我的投注（阿凯 8/10）→ 分享到广场（默认无标题框）→ 确认即上广场；点「修改标题」再确认才进待审</li>
+      <li>已分享卡点「查看数据」：跟单人数、总下注额、预期/已发额外奖励。顶栏「讯」看通知。</li>
+      <li>运营端：免审单已是招募中；概览待审只计改了标题的晒单。配置可改晒单奖励比例。演示数据在浏览器 session，侧栏可重置。</li>
+    </ul>
+  </div>
+</body>
+</html>

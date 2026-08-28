@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 策略</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="strategies.html" data-title="AI 策略">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="card">
+          <div class="toolbar">
+            <button class="btn" id="add">新建策略</button>
+          </div>
+          <p class="hint">策略决定作者「怎么选」。算法 / 模型可多选：出单时同时参考勾选的模型。用户看见的是「用户可见说明」，不是内部算法名。改参数不追溯已发布方案。</p>
+          <table id="tbl"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-mask" id="drawer"></div>
+  <script src="js/admin.js"></script>
+  <script>
+    var algos = [
+      ["ensemble", "集成模型"],
+      ["poisson", "泊松 / xG"],
+      ["elo", "Elo 实力"],
+      ["ah", "亚盘模型"],
+      ["value", "价值偏差"],
+      ["ou", "大小球模型"]
+    ];
+
+    function render() {
+      document.getElementById("tbl").innerHTML =
+        "<tr><th>策略</th><th>算法 / 模型</th><th>用户可见说明</th><th>盘口</th><th>置信 / 腿 / 总赔</th><th>发布</th><th>状态</th><th></th></tr>" +
+        ADM.db.strategies.map(function (s) {
+          var used = ADM.db.authors.filter(function (a) { return a.sid === s.id; }).length;
+          return "<tr><td><b>" + ADM.esc(s.name) + "</b><div class='muted'>" + used + " 个作者在用</div></td>" +
+            "<td>" + ADM.esc(ADM.algoText(s)) + "</td><td>" + ADM.esc(s.userLine) + "</td>" +
+            "<td>" + s.markets.join(" / ") + "</td>" +
+            "<td>" + s.conf + " · " + s.legs + " · " + s.odd + "</td>" +
+            "<td>" + (s.auto ? "自动发布" : "人工审核") + "</td>" +
+            "<td>" + (s.on ? ADM.statusLabel.on : ADM.statusLabel.off) + "</td>" +
+            "<td class='row-actions'><button class='btn ghost sm' data-edit='" + s.id + "'>编辑</button>" +
+            "<button class='btn ghost sm' data-tog='" + s.id + "'>" + (s.on ? "停用" : "启用") + "</button></td></tr>";
+        }).join("");
+    }
+
+    function form(s) {
+      s = s || { id: "", name: "", userLine: "", algos: [], markets: ["1x2"], conf: 0.65, legs: "2-3", odd: "3-8", auto: false, on: true };
+      var selected = ADM.algosOf(s);
+      ADM.openDrawer(
+        "<h3>" + (s.id ? "编辑策略" : "新建策略") + "</h3>" +
+        "<div class='form'>" +
+          "<div class='full'><label>对内名称</label><input class='field' id='f-name' value='" + ADM.esc(s.name) + "'></div>" +
+          "<div class='full'><label>使用的算法 / 模型（可多选）</label>" +
+          "<div class='tiles' id='f-algos'>" +
+            algos.map(function (x) {
+              return "<label><input type='checkbox' value='" + x[0] + "'" + (selected.indexOf(x[0]) >= 0 ? " checked" : "") + "> " + x[1] + "</label>";
+            }).join("") +
+          "</div><p class='hint' style='margin-top:8px'>勾选多个表示出单时同时参考这些模型。例如「多模型一致才出单」应勾集成、泊松、Elo 等。</p></div>" +
+          "<div class='full'><label>用户可见说明（一句话）</label><input class='field' id='f-line' value='" + ADM.esc(s.userLine) + "' placeholder='仅使用泊松期望模型推荐'></div>" +
+          "<div class='full'><label>盘口范围</label><div class='checks' id='f-markets'>" +
+            [["1x2","胜平负"],["ah","让球"],["ou","大小球"]].map(function (m) {
+              return "<label><input type='checkbox' value='" + m[0] + "'" + (s.markets.indexOf(m[0]) >= 0 ? " checked" : "") + "> " + m[1] + "</label>";
+            }).join("") +
+          "</div></div>" +
+          "<div><label>置信度阈值</label><input class='field' id='f-conf' type='number' step='0.01' min='0' max='1' value='" + s.conf + "'></div>" +
+          "<div><label>单方案腿数</label><input class='field' id='f-legs' value='" + ADM.esc(s.legs) + "'></div>" +
+          "<div><label>总赔率区间</label><input class='field' id='f-odd' value='" + ADM.esc(s.odd) + "'></div>" +
+          "<div><label>发布方式</label><select class='field' id='f-auto'><option value='0'>人工审核</option><option value='1'>自动发布</option></select></div>" +
+          "<div class='full hint'>停用后，已绑定作者不能再发新方案；已在招募的方案可继续到截止。</div>" +
+        "</div>" +
+        "<div class='toolbar' style='margin-top:16px'><button class='btn' id='save'>保存</button><button class='btn ghost' onclick='document.getElementById(\"drawer\").classList.remove(\"show\")'>取消</button></div>"
+      );
+      document.getElementById("f-auto").value = s.auto ? "1" : "0";
+      document.getElementById("save").onclick = function () {
+        var pickedAlgos = Array.prototype.map.call(document.querySelectorAll("#f-algos input:checked"), function (i) { return i.value; });
+        var markets = Array.prototype.map.call(document.querySelectorAll("#f-markets input:checked"), function (i) { return i.value; });
+        if (!pickedAlgos.length) return alert("至少勾选一种算法 / 模型");
+        if (!markets.length) return alert("至少选一种盘口");
+        var payload = {
+          id: s.id || ("s" + Date.now()),
+          name: document.getElementById("f-name").value.trim(),
+          userLine: document.getElementById("f-line").value.trim(),
+          algos: pickedAlgos,
+          markets: markets,
+          conf: parseFloat(document.getElementById("f-conf").value) || 0.6,
+          legs: document.getElementById("f-legs").value,
+          odd: document.getElementById("f-odd").value,
+          auto: document.getElementById("f-auto").value === "1",
+          on: s.on !== false
+        };
+        if (!payload.name || !payload.userLine) return alert("名称和用户可见说明必填");
+        if (s.id) ADM.db.strategies = ADM.db.strategies.map(function (x) { return x.id === s.id ? payload : x; });
+        else ADM.db.strategies.push(payload);
+        ADM.save();
+        document.getElementById("drawer").classList.remove("show");
+        render();
+      };
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      render();
+      document.getElementById("add").onclick = function () { form(null); };
+      document.getElementById("tbl").addEventListener("click", function (e) {
+        var id = e.target.getAttribute("data-edit");
+        var tog = e.target.getAttribute("data-tog");
+        if (id) form(ADM.strategy(id));
+        if (tog) {
+          var s = ADM.strategy(tog);
+          s.on = !s.on;
+          ADM.save();
+          render();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

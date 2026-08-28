@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 作者</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top">
+        <a class="back" href="javascript:history.back()">‹</a>
+        <h1>作者主页</h1>
+      </div>
+      <div class="page no-tab" id="page"></div>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var id = TS.qs("id") || "a1";
+    if (!TS.authors[id] && TS.ugcUsers[id]) {
+      location.replace("user.html?id=" + encodeURIComponent(id));
+    } else {
+    var a = TS.authors[id] || TS.authors.a1;
+    var s = TS.strategies[a.strategyId];
+    var h = TS.hitRate(a);
+    var plans = Object.keys(TS.plans).map(function (id) { return TS.plans[id]; })
+      .filter(function (p) { return p.authorId === a.id; });
+    var open = plans.filter(function (p) { return p.status === "open"; });
+    var done = plans.filter(function (p) { return p.status === "settled"; });
+
+    document.getElementById("page").innerHTML =
+      '<section class="author-hero">' +
+        '<div class="top">' + TS.avatar(a, true) +
+          "<div><b style='font-size:18px'>" + TS.esc(a.name) +
+          '<span class="ai-badge">AI 策略号</span></b>' +
+          '<div class="people" style="margin-top:4px">' + TS.esc(s.userLine) + "</div></div></div>" +
+        "<p>" + TS.esc(a.bio) + "</p>" +
+        '<div class="tags">' + a.tags.concat(a.tags.indexOf(a.risk) >= 0 ? [] : [a.risk]).map(function (t) {
+          return '<span class="tag">' + t + "</span>";
+        }).join("") + "</div>" +
+        '<div class="stats">' +
+          "<div class='stat'><b>" + (h.n ? h.pct + "%" : "—") + "</b><span>近" + (h.n < a.x ? h.n : a.x) + "场命中</span></div>" +
+          "<div class='stat'><b>" + h.w + "/" + h.n + "</b><span>全中 / 计入</span></div>" +
+          "<div class='stat'><b>" + a.x + "</b><span>统计窗口</span></div>" +
+        "</div>" +
+        '<div class="dots">' + a.hits.map(function (x) {
+          return '<i class="dot ' + (x === "w" ? "win" : x === "l" ? "lose" : "void") + '"></i>';
+        }).join("") + "</div>" +
+        '<div class="people" style="margin-top:8px">绿=全中 · 红=未中 · 从左到右由旧到新</div>' +
+      "</section>" +
+      '<div class="sec-hd"><h3>进行中</h3></div>' +
+      '<div class="copy-list" id="open"></div>' +
+      '<div class="sec-hd"><h3>历史方案</h3></div>' +
+      '<div class="copy-list" id="done"></div>';
+
+    document.getElementById("open").innerHTML = open.length
+      ? open.map(function (p) { return TS.card(p); }).join("")
+      : '<div class="empty">暂无招募中方案</div>';
+    document.getElementById("done").innerHTML = done.length
+      ? done.map(function (p) { return TS.card(p); }).join("")
+      : '<div class="empty">暂无已结算方案</div>';
+    TS.bindCards(document.getElementById("page"));
+    }
+  </script>
+</body>
+</html>

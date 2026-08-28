@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跟单运营台 · 方案</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-page="plans.html" data-title="方案审核与发布">
+  <div id="app" style="display:flex;min-height:100vh;width:100%">
+    <div class="main">
+      <div class="body">
+        <div class="card">
+          <div class="toolbar">
+            <select id="st">
+              <option value="">全部状态</option>
+              <option value="review">待审核</option>
+              <option value="live">招募中</option>
+              <option value="draft">候选</option>
+              <option value="rejected">已驳回</option>
+              <option value="win">已结算-全中</option>
+              <option value="lose">已结算-未中</option>
+            </select>
+            <select id="src">
+              <option value="">全部来源</option>
+              <option value="algo">算法生成</option>
+              <option value="manual">人工补单</option>
+              <option value="ugc">用户分享</option>
+            </select>
+            <select id="aid">
+              <option value="">全部作者</option>
+            </select>
+            <button class="btn ghost" id="gen">按策略生成候选</button>
+            <button class="btn" id="manual">人工补单</button>
+          </div>
+          <p class="hint">人工补单必须先选作者，再填注项。总赔率按各腿连乘。默认进待审核；作者已上架才可以「保存并发布」。</p>
+          <p class="hint">用户晒单：未改标题的提交即招募中（免审·未改标题）。只有用户改了标题才进待审核，过审/驳回；驳回原因用户可见并通知。</p>
+          <p class="hint">「结算全中 / 结算未中」是整份方案的结果，不是单场：全中 = 每一腿都打中；未中 = 至少一腿没打中。正式环境应先接赛果自动判，这两颗按钮是人工兜底。</p>
+          <table id="tbl"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-mask" id="drawer"></div>
+  <script src="js/admin.js"></script>
+  <script>
+    var samples = [
+      { title: "午后泊松两场", legs: "布莱顿大2.5 / 佛罗伦萨主胜", odd: 3.28 },
+      { title: "亚盘精选 2串1", legs: "热刺-0.5 / 勒沃库森-0.75", odd: 3.51 },
+      { title: "高置信三场", legs: "巴黎主胜 / 国米-0.5 / 皇社小3.5", odd: 5.62 }
+    ];
+    var markets = ["胜平负", "让球", "大小球"];
+    var statusName = { on: "上架", draft: "草稿", off: "下架" };
+
+    function sourceBadge(src) {
+      if (src === "ugc") return '<span class="badge ugc">用户分享</span>';
+      if (src === "manual") return '<span class="badge wait">人工补单</span>';
+      return '<span class="badge">算法生成</span>';
+    }
+
+    function authorOptions(selected) {
+      return '<option value="">请选择作者</option>' + ADM.db.authors.map(function (a) {
+        var s = ADM.strategy(a.sid);
+        return "<option value='" + a.id + "'" + (a.id === selected ? " selected" : "") + ">" +
+          a.name + " · " + (statusName[a.status] || a.status) + " · " + s.name + "</option>";
+      }).join("");
+    }
+
+    function actorCell(p) {
+      if (p.source === "ugc") {
+        return ADM.esc(p.userName || "用户") + "<div class='muted'>用户晒单 · 不绑策略</div>";
+      }
+      var a = ADM.author(p.aid);
+      var s = a ? ADM.strategy(a.sid) : null;
+      return ADM.esc(a ? a.name : "—") + "<div class='muted'>" + ADM.esc(s ? s.name : "—") + "</div>";
+    }
+
+    function render() {
+      ADM.syncUgc();
+      var st = document.getElementById("st").value;
+      var aid = document.getElementById("aid").value;
+      var src = document.getElementById("src").value;
+      var rows = ADM.db.plans.filter(function (p) {
+        return (!st || p.status === st) && (!aid || p.aid === aid) && (!src || p.source === src);
+      });
+      document.getElementById("tbl").innerHTML =
+        "<tr><th>方案</th><th>作者 / 来源人</th><th>注项</th><th>总赔</th><th>跟单</th><th>状态</th><th></th></tr>" +
+        rows.map(function (p) {
+          var extra = p.status === "rejected" && p.rejectReason
+            ? "<div class='muted'>驳回：" + ADM.esc(p.rejectReason) + "</div>"
+            : "";
+          var audit = "";
+          if (p.source === "ugc") {
+            audit = p.skipAudit || p.auditNote === "免审·未改标题"
+              ? " <span class='badge skip'>免审·未改标题</span>"
+              : (p.titleEdited ? " <span class='badge wait'>改标题·" + (p.status === "review" ? "待审" : (p.status === "rejected" ? "已驳回" : "已审")) + "</span>" : "");
+          }
+          return "<tr><td><b>" + ADM.esc(p.title) + "</b><div class='muted'>" + p.id + " · " + sourceBadge(p.source) + audit + extra + "</div></td>" +
+            "<td>" + actorCell(p) + "</td>" +
+            "<td>" + ADM.esc(ADM.legsText(p)) + "</td><td>" + Number(p.odd).toFixed(2) + "</td>" +
+            "<td>" + p.follows + " / " + p.gmv + "</td><td>" + (ADM.statusLabel[p.status] || p.status) + "</td>" +
+            "<td class='row-actions'>" +
+            (p.status === "review" || p.status === "draft" ? "<button class='btn sm' data-pub='" + p.id + "'>通过</button><button class='btn ghost sm' data-rej='" + p.id + "'>驳回</button>" : "") +
+            (p.status === "live" ? "<button class='btn ghost sm' data-down='" + p.id + "'>下架</button>" : "") +
+            (p.status === "live" ? "<button class='btn ghost sm' data-win='" + p.id + "' title='方案里每一腿都打中，整单派奖'>结算全中</button><button class='btn ghost sm' data-lose='" + p.id + "' title='至少一腿没打中，整单输'>结算未中</button>" : "") +
+            "</td></tr>";
+        }).join("");
+    }
+
+    function generate() {
+      var liveAuthors = ADM.db.authors.filter(function (a) { return a.status === "on" && ADM.strategy(a.sid).on; });
+      if (!liveAuthors.length) return alert("没有上架且策略启用的作者");
+      var a = liveAuthors[Math.floor(Math.random() * liveAuthors.length)];
+      var s = ADM.strategy(a.sid);
+      var sample = samples[Math.floor(Math.random() * samples.length)];
+      ADM.db.plans.unshift({
+        id: "p" + Date.now(),
+        aid: a.id,
+        title: sample.title + " · " + a.name,
+        status: s.auto ? "live" : "review",
+        odd: sample.odd,
+        follows: 0,
+        gmv: 0,
+        legs: sample.legs,
+        source: "algo"
+      });
+      ADM.save();
+      render();
+      alert(s.auto
+        ? "已按「" + s.name + "」自动发布到招募中（策略开启了自动发布）"
+        : "已生成候选，进入待审核。作者：" + a.name + " / 策略：" + s.name);
+    }
+
+    function readLegs() {
+      return Array.prototype.map.call(document.querySelectorAll("#legs .leg-edit"), function (row) {
+        return {
+          match: row.querySelector("[data-f=match]").value.trim(),
+          market: row.querySelector("[data-f=market]").value,
+          pick: row.querySelector("[data-f=pick]").value.trim(),
+          odd: parseFloat(row.querySelector("[data-f=odd]").value)
+        };
+      });
+    }
+
+    function totalOdd(legs) {
+      var t = legs.reduce(function (acc, leg) {
+        return acc * (leg.odd > 1 ? leg.odd : 1);
+      }, 1);
+      return Math.round(t * 100) / 100;
+    }
+
+    function refreshOdd() {
+      var el = document.getElementById("total-odd");
+      if (el) el.textContent = totalOdd(readLegs()).toFixed(2);
+    }
+
+    function addLegRow(leg) {
+      leg = leg || { match: "", market: "胜平负", pick: "", odd: "" };
+      var box = document.getElementById("legs");
+      var row = document.createElement("div");
+      row.className = "leg-edit";
+      row.innerHTML =
+        "<div class='form'>" +
+          "<div class='full'><label>赛事</label><input class='field' data-f='match' placeholder='主队 vs 客队' value='" + ADM.esc(leg.match) + "'></div>" +
+          "<div><label>玩法</label><select class='field' data-f='market'>" +
+            markets.map(function (m) {
+              return "<option" + (m === leg.market ? " selected" : "") + ">" + m + "</option>";
+            }).join("") +
+          "</select></div>" +
+          "<div><label>推荐选项</label><input class='field' data-f='pick' placeholder='主胜 / 大2.5 / -0.5' value='" + ADM.esc(leg.pick) + "'></div>" +
+          "<div class='full'><label>赔率</label><input class='field' data-f='odd' type='number' step='0.01' min='1.01' value='" + ADM.esc(leg.odd) + "'></div>" +
+        "</div>" +
+        "<button class='btn ghost sm' type='button' data-del style='margin-top:8px'>删除这腿</button>";
+      box.appendChild(row);
+      row.addEventListener("input", refreshOdd);
+      row.querySelector("[data-del]").onclick = function () {
+        if (document.querySelectorAll("#legs .leg-edit").length <= 1) return alert("至少留一腿");
+        row.remove();
+        refreshOdd();
+      };
+    }
+
+    function showAuthorHint() {
+      var id = document.getElementById("f-author").value;
+      var hint = document.getElementById("author-hint");
+      var pub = document.getElementById("save-pub");
+      if (!id) {
+        hint.textContent = "必须由人工指定作者。方案会挂在该作者名下，结算后计入其近 X 场。";
+        pub.disabled = true;
+        return;
+      }
+      var a = ADM.author(id);
+      var s = ADM.strategy(a.sid);
+      hint.textContent = a.name + " · " + (statusName[a.status] || a.status) + " · 绑定策略「" + s.name + "」· " + s.userLine;
+      pub.disabled = a.status !== "on";
+    }
+
+    function saveManual(publish) {
+      var aid = document.getElementById("f-author").value;
+      if (!aid) return alert("请选择作者");
+      var a = ADM.author(aid);
+      if (publish && a.status !== "on") return alert("作者未上架，不能直接发布");
+      var title = document.getElementById("f-title").value.trim();
+      var legs = readLegs();
+      if (!title) return alert("请填写方案标题");
+      if (!legs.length) return alert("至少一腿");
+      for (var i = 0; i < legs.length; i++) {
+        if (!legs[i].match || !legs[i].pick || !(legs[i].odd > 1)) {
+          return alert("第 " + (i + 1) + " 腿请填完整赛事、选项，赔率需大于 1");
+        }
+      }
+      var combo = legs.length + "串1";
+      ADM.db.plans.unshift({
+        id: "p" + Date.now(),
+        aid: aid,
+        title: title.indexOf(combo) >= 0 ? title : title + " " + combo,
+        status: publish ? "live" : "review",
+        odd: totalOdd(legs),
+        follows: 0,
+        gmv: 0,
+        legs: legs.map(function (l) { return l.match + " " + l.pick; }).join(" / "),
+        source: "manual"
+      });
+      ADM.save();
+      document.getElementById("drawer").classList.remove("show");
+      render();
+    }
+
+    function openManual() {
+      ADM.openDrawer(
+        "<h3>人工补单</h3>" +
+        "<div class='form'>" +
+          "<div class='full'><label>作者（必选，人工指定）</label>" +
+          "<select class='field' id='f-author'>" + authorOptions("") + "</select>" +
+          "<p class='hint' id='author-hint' style='margin-top:8px'>必须由人工指定作者。方案会挂在该作者名下，结算后计入其近 X 场。</p></div>" +
+          "<div class='full'><label>方案标题</label><input class='field' id='f-title' placeholder='如：欧冠夜场'></div>" +
+          "<div class='full'><label>注项</label><div id='legs'></div>" +
+          "<button class='btn ghost sm' type='button' id='add-leg'>+ 加一腿</button></div>" +
+          "<div class='full odd-bar'><span>总赔率（各腿连乘）</span><b id='total-odd'>1.00</b></div>" +
+        "</div>" +
+        "<div class='toolbar' style='margin-top:16px'>" +
+          "<button class='btn ghost' id='save-review'>保存为待审核</button>" +
+          "<button class='btn' id='save-pub' disabled>保存并发布</button>" +
+          "<button class='btn ghost' onclick='document.getElementById(\"drawer\").classList.remove(\"show\")'>取消</button>" +
+        "</div>"
+      );
+      addLegRow();
+      addLegRow();
+      refreshOdd();
+      document.getElementById("f-author").onchange = showAuthorHint;
+      document.getElementById("add-leg").onclick = function () { addLegRow(); refreshOdd(); };
+      document.getElementById("save-review").onclick = function () { saveManual(false); };
+      document.getElementById("save-pub").onclick = function () { saveManual(true); };
+    }
+
+    function bumpHit(aid, win) {
+      var a = ADM.author(aid);
+      a.n += 1;
+      if (win) a.w += 1;
+      if (a.n > a.x) {
+        a.n = a.x;
+        a.w = Math.min(a.w, a.x);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      document.getElementById("aid").innerHTML += ADM.db.authors.map(function (a) {
+        return "<option value='" + a.id + "'>" + a.name + "</option>";
+      }).join("");
+      render();
+      document.getElementById("st").onchange = render;
+      document.getElementById("src").onchange = render;
+      document.getElementById("aid").onchange = render;
+      document.getElementById("gen").onclick = generate;
+      document.getElementById("manual").onclick = openManual;
+      document.getElementById("tbl").addEventListener("click", function (e) {
+        var pub = e.target.getAttribute("data-pub");
+        var rej = e.target.getAttribute("data-rej");
+        var down = e.target.getAttribute("data-down");
+        var win = e.target.getAttribute("data-win");
+        var lose = e.target.getAttribute("data-lose");
+        if (!pub && !rej && !down && !win && !lose) return;
+        var id = pub || rej || down || win || lose;
+        var p = ADM.db.plans.filter(function (x) { return x.id === id; })[0];
+        if (!p) return;
+        if (pub) {
+          p.status = "live";
+          if (p.source === "ugc") p.auditNote = "改标题·已通过";
+        }
+        if (rej) {
+          if (p.source === "ugc") {
+            var reason = window.prompt("驳回原因（用户可见）", p.rejectReason || "盘口已变化或文案违规");
+            if (reason === null) return;
+            p.status = "rejected";
+            p.rejectReason = reason || "未通过审核";
+            p.auditNote = "改标题·已驳回";
+            ADM.pushNotice({
+              userId: p.uid || "u-me",
+              type: "reject",
+              planId: p.id,
+              planTitle: p.title,
+              title: "改标题未通过",
+              body: (p.title || "晒单") + "：" + p.rejectReason
+            });
+          } else {
+            p.status = "draft";
+          }
+        }
+        if (down) {
+          if (p.status === "live" && p.source === "ugc") {
+            ADM.pushNotice({
+              userId: p.uid || "u-me",
+              type: "cutoff",
+              planId: p.id,
+              planTitle: p.title,
+              title: "你的" + p.title + "已截止跟单",
+              body: "方案已下架或截止，不再接受新的跟单。"
+            });
+          }
+          p.status = "draft";
+        }
+        if (win) {
+          p.status = "win";
+          if (p.source !== "ugc" && p.aid) bumpHit(p.aid, true);
+          if (p.source === "ugc") {
+            var paid = Math.round((Number(p.gmv) || 0) * ADM.rewardPct()) / 100;
+            p.rewardPaid = paid;
+            ADM.pushNotice({
+              userId: p.uid || "u-me", type: "settle_win", planId: p.id, planTitle: p.title,
+              title: "你的" + p.title + "结算全中",
+              body: "方案全中。跟单用户按现网串关派奖；你的额外奖励见下一则。"
+            });
+            ADM.pushNotice({
+              userId: p.uid || "u-me", type: "reward", planId: p.id, planTitle: p.title,
+              title: "晒单奖励已到账 " + paid.toFixed(2),
+              body: "跟单总本金 " + (p.gmv || 0) + " × " + ADM.rewardPct() + "% = " + paid.toFixed(2) + "。不计入 AI 作者战绩。"
+            });
+          }
+        }
+        if (lose) {
+          p.status = "lose";
+          if (p.source !== "ugc" && p.aid) bumpHit(p.aid, false);
+          if (p.source === "ugc") {
+            p.rewardPaid = 0;
+            ADM.pushNotice({
+              userId: p.uid || "u-me", type: "settle_lose", planId: p.id, planTitle: p.title,
+              title: "你的" + p.title + "结算未中",
+              body: "方案未全中，不发放晒单额外奖励。"
+            });
+          }
+        }
+        if (p.source === "ugc") ADM.writeUgcPlan(p);
+        ADM.save();
+        render();
+      });
+    });
+  </script>
+</body>
+</html>

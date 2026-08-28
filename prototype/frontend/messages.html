@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 消息</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top">
+        <a class="back" href="javascript:history.back()">‹</a>
+        <h1>消息</h1>
+      </div>
+      <div class="page no-tab" id="page"></div>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    TS.hydrate();
+    var list = TS.myNotices();
+    document.getElementById("page").innerHTML = list.length
+      ? list.map(function (n) {
+          var href = n.planId ? ("plan-detail.html?id=" + encodeURIComponent(n.planId) + "&nid=" + encodeURIComponent(n.id)) : "#";
+          return '<a class="msg-card' + (n.unread ? " unread" : "") + '" href="' + href + '">' +
+            '<div class="hd"><b>' + TS.esc(n.title) + "</b><span class="when">' + TS.esc(n.time) + "</span></div>" +
+            '<div class="people">' + TS.esc(n.body || "") + "</div>" +
+          "</a>";
+        }).join("")
+      : '<div class="empty">暂无消息。有人跟你的晒单、方案截止/结算、奖励到账或改标题被驳回时会出现在这里。</div>';
+  </script>
+</body>
+</html>

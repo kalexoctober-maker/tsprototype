@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 方案详情</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top" id="top">
+        <a class="back" href="javascript:history.back()">‹</a>
+        <h1>方案详情</h1>
+      </div>
+      <div class="page no-tab" id="page" style="padding-bottom:90px"></div>
+      <div class="sticky-bar" id="bar"></div>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    TS.hydrate();
+    if (TS.qs("nid")) TS.markNoticeRead(TS.qs("nid"));
+    TS.mountBell(document.getElementById("top"));
+    var planId = TS.qs("id") || "p1";
+
+    function paint(plan) {
+      plan = plan || TS.plans[planId] || TS.plans.p1;
+      var ugc = TS.isUgc(plan);
+      var a = TS.owner(plan) || TS.authors.a1;
+      var odd = TS.totalOdd(plan);
+      var publisher = TS.isPublisher(plan);
+      var profile = ugc ? ("user.html?id=" + encodeURIComponent(a.id)) : ("author.html?id=" + encodeURIComponent(a.id));
+      var badge = ugc ? '<span class="ugc-badge">用户晒单</span>' : '<span class="ai-badge">AI 策略号</span>';
+      var sub = ugc ? "晒自己的实盘注单，不是 AI 策略号" : TS.authorLine(a);
+      var hit = ugc ? TS.ugcHitBadge(a) : TS.hitBadge(a);
+      var notice = ugc
+        ? ("本方案由用户「" + a.name + "」分享，不是平台 AI 策略号，也不代表官方推荐。展示命中率为该用户近 " +
+          TS.shareCfg().n + " 场已结算注单，不计入任何 AI 作者战绩。过往命中不代表未来。")
+        : (function () {
+            var h = TS.hitRate(a);
+            return "近" + (h.n < a.x ? h.n : a.x) + "场实盘命中 " + h.w + "/" + h.n +
+              "。命中指整个方案全中，走水不计入窗口。AI 推荐不保证盈利，过往命中率不代表未来结果。";
+          })();
+      var reviewing = plan.adminStatus === "review";
+      var rejected = plan.adminStatus === "rejected";
+      var banner = "";
+      if (publisher && reviewing) {
+        banner = '<div class="review-banner">已改标题，待运营审核。通过后才会出现在广场。</div>';
+      } else if (publisher && rejected) {
+        banner = '<div class="review-banner">已驳回：' + TS.esc(plan.rejectReason || "未通过审核") + "</div>";
+      }
+      document.getElementById("page").innerHTML =
+        banner +
+        '<a class="detail-head" href="' + profile + '">' +
+          '<div class="author-row" style="margin:0">' +
+            TS.avatar(a) +
+            '<div class="who"><b>' + TS.esc(a.name) + badge + "</b>" +
+            "<span>" + TS.esc(sub) + "</span></div>" +
+            hit +
+          "</div></a>" +
+        '<div class="detail-head">' +
+          '<div class="plan-title" style="margin:0 0 6px">' + TS.esc(plan.title) + "<span>" + plan.combo + "</span></div>" +
+          '<div class="people" id="follow-meta">' + plan.cutoff + " · " + plan.follows + " 人已跟 · 累计 " +
+            TS.money(plan.amount) + "</div>" +
+        "</div>" +
+        TS.ownerStatsHtml(plan) +
+        '<div class="legs-card">' +
+          plan.legs.map(function (leg) {
+            return '<div class="leg-row"><div><div class="name">' + TS.esc(leg.match) + "</div>" +
+              '<div class="sub">' + TS.esc(leg.league) + " · " + TS.esc(leg.time) + " · " + TS.esc(leg.market) + "</div></div>" +
+              '<div class="pick"><span>' + TS.esc(leg.pick) + "</span><b>" + leg.odd.toFixed(2) + "</b></div></div>";
+          }).join("") +
+        "</div>" +
+        '<div class="notice">' + TS.esc(notice) + "</div>";
+
+      var can = !reviewing && !rejected && (plan.status === "open" || plan.status === "live");
+      var barText = reviewing ? "审核中" : (rejected ? "已驳回" : (can ? "跟单" : "已截止"));
+      document.getElementById("bar").innerHTML =
+        '<div class="sum"><small>总赔率</small><b>' + odd.toFixed(2) + "</b></div>" +
+        '<button class="btn" style="flex:1;height:44px" id="go"' + (can ? "" : " disabled") + ">" + barText + "</button>";
+      var go = document.getElementById("go");
+      if (go && can) go.addEventListener("click", function () { TS.openSheet(plan.id); });
+    }
+
+    TS.onFollowed = function (plan) { paint(plan); };
+    paint();
+  </script>
+</body>
+</html>

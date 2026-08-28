@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>TS · 晒单用户</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● ●</span></div>
+      <div class="nav-top" id="top">
+        <a class="back" href="javascript:history.back()">‹</a>
+        <h1>晒单用户</h1>
+      </div>
+      <div class="page no-tab" id="page"></div>
+      <div class="sheet-mask" id="sheet"></div>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    TS.hydrate();
+    TS.mountBell(document.getElementById("top"));
+    var id = TS.qs("id") || "u-share";
+    if (TS.authors[id] && !TS.ugcUsers[id]) location.replace("author.html?id=" + encodeURIComponent(id));
+    var u = TS.ugcUsers[id] || TS.ugcUsers["u-share"];
+    var cfg = TS.shareCfg();
+    var h = TS.userHitRate(u, cfg.n);
+    var plans = Object.keys(TS.plans).map(function (pid) { return TS.plans[pid]; })
+      .filter(function (p) { return TS.isUgc(p) && p.userId === u.id && (p.status === "open" || p.status === "live"); });
+
+    document.getElementById("page").innerHTML =
+      '<section class="author-hero">' +
+        '<div class="top">' + TS.avatar(u, true) +
+          "<div><b style='font-size:18px'>" + TS.esc(u.name) +
+          '<span class="ugc-badge">用户晒单</span></b>' +
+          '<div class="people" style="margin-top:4px">真实用户 · 不是 AI 策略号</div></div></div>' +
+        "<p>" + TS.esc(u.bio || "") + "</p>" +
+        '<div class="stats">' +
+          "<div class='stat'><b>" + (h.n ? h.pct + "%" : "—") + "</b><span>近" + cfg.n + "场注单</span></div>" +
+          "<div class='stat'><b>" + h.w + "/" + h.n + "</b><span>猜中 / 计入</span></div>" +
+          "<div class='stat'><b>" + cfg.n + "</b><span>晒单窗口</span></div>" +
+        "</div>" +
+        '<div class="dots">' + (u.hits || []).map(function (x) {
+          return '<i class="dot ' + (x === "w" ? "win" : x === "l" ? "lose" : "void") + '"></i>';
+        }).join("") + "</div>" +
+        '<div class="people" style="margin-top:8px">绿=猜中 · 红=未中 · 口径是用户自己的已结算注单，不是 AI 作者方案。</div>' +
+      "</section>" +
+      '<div class="notice" style="padding-top:0">平台不为该用户创建可运营作者档案，也不会把这些注单写进任何策略号战绩。过往命中不代表未来。</div>' +
+      '<div class="sec-hd"><h3>广场上的晒单</h3></div>' +
+      '<div class="copy-list" id="open"></div>';
+
+    document.getElementById("open").innerHTML = plans.length
+      ? plans.map(function (p) { return TS.card(p); }).join("")
+      : '<div class="empty">暂无已通过的晒单</div>';
+    TS.bindCards(document.getElementById("page"));
+  </script>
+</body>
+</html>
